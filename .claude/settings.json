@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; case \"$f\" in */client/web/*.ts|*/client/web/*.tsx) ;; *) exit 0 ;; esac; bin=\"$CLAUDE_PROJECT_DIR/client/web/node_modules/.bin/oxlint\"; [ -x \"$bin\" ] || exit 0; cd \"$CLAUDE_PROJECT_DIR/client/web\" && \"$bin\" \"$f\" >&2 || exit 2; }",
+            "timeout": 30,
+            "statusMessage": "Linting with oxlint..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; case \"$f\" in */okf/*.md) ;; *) exit 0 ;; esac; python3 -I \"$CLAUDE_PROJECT_DIR/scripts/okf-validate.py\" >&2 || exit 2; }",
+            "timeout": 15,
+            "statusMessage": "Validating OKF bundle..."
+          }
+        ]
+      }
+    ]
+  }
+}
