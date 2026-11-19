@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-The README carries an archive notice pointing to create-reflow. Ignore it for workflow purposes: this fork (`mjhcompany/naya-reflow`) is still developed. Do take its warning seriously that `docs/`, `research/` and `toolkit/` findings date from Sep–Oct 2026 and may be outdated; when a doc and the code disagree, say so rather than picking one silently.
+The README carries an archive notice pointing to create-reflow. Ignore it: `mjhcompany/naya-reflow` is a fully separate project forked from the archived original, developed here, with no plan to follow or converge with create-reflow. The owner has a Naya Create for testing; "proven" results in the docs come from the original author's unit and are not yet re-verified on ours. Do take the notice's warning seriously that `docs/`, `research/` and `toolkit/` findings date from Sep–Oct 2026 and may be outdated; when a doc and the code disagree, say so rather than picking one silently.
 
 ## Layout
 
@@ -31,13 +31,16 @@ Before every commit: build passes, both smokes pass, lint is clean for touched f
 
 Wire traffic goes to a real keyboard, and some verbs brick or wipe it.
 
-- Never send, and never add code that sends: `fa/*` (format/erase), `ee/10be` and `ee/10ae` (DFU/MCUboot resets), `30/10ca` (factory format). `assertWireAllowed` in `client/web/src/lib/troubleshooting/wire-guard.ts` enforces this at runtime; do not loosen it. These stay text-only recipes, never buttons.
-- `fe/100a` (commit verb): the docs say never send or replay it, but wire-guard allows it and a smoke check expects that. Ask the user before adding or changing any code that sends `fe/100a`.
+- Never send, and never add code that sends: `fa/1002` and `fa/1006` (format/erase), `ee/10be` and `ee/10ae` (DFU/MCUboot resets), `30/10ca` (factory format; wipes the layer-list store, and only a stock NayaFlow flash restores it). These stay text-only recipes, never buttons.
+- `fa/1001` is the one `fa` verb in normal use: the session's wake/identify probe (`lib/naya.ts`). Troubleshooting recipes may not use any `fa/*`; `assertWireAllowed` in `client/web/src/lib/troubleshooting/wire-guard.ts` refuses the whole group plus the verbs above. Do not loosen it.
+- `fe/100a` is SET ACTIVITY TIMEOUTS (13 bytes), and the web client sends it for the timeout sliders. Older parts of the docs call it a "commit"; that is stale. Never replay captured `fe/100a` bytes as a commit: that wedged the device. Ask the user before adding any new code path that sends `fe/100a`.
+- An ACK proves the device parsed a frame, not that it applied it. Confirm writes by reading back.
+- Malformed short `ed/*` writes zero NVS settings, and oversized frames wedge the parser. Build frames with the existing helpers.
 - Writes go to the LEFT half only.
 - Validate write ACKs with `isWriteAck(ack, layer)`, never a strict `00 00` compare.
 - LED writes go through `NayaSession.writeLed`; do not hand-roll them.
 - `30/1004` params must be `[00, layer] + record`. Without the layer byte the device ACKs but applies nothing.
-- The device silently ignores record rewrites that change length; that is why `lib/queue.ts` exists. Route such writes through the queue.
+- Length-changing `30/1004` writes do apply. The older "silently ignored" rule in `toolkit/README.md` and elsewhere was refuted (see `docs/cdc-protocol.md`). Replacing a T10 key with a plain action must also clear its shadow slot at `KK+0x52`; `lib/queue.ts` and `lib/t10.ts` handle that, so queue key changes through them.
 - Toolkit write scripts are dry-run by default and need `--apply`. Do not pass `--apply` without being asked.
 
 ## Snapshot schema
